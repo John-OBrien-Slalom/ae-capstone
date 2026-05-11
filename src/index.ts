@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import rateLimit from "express-rate-limit";
 import mongoose, { isValidObjectId } from "mongoose";
 
 import { MovieModel } from "./models/Movie";
@@ -8,28 +9,13 @@ import { ReviewModel } from "./models/Review";
 const app = express();
 app.use(express.json());
 
-const WINDOW_MS = 60_000;
-const MAX_DB_REQUESTS_PER_WINDOW = 60;
-const requestCounts = new Map<string, { count: number; windowStart: number }>();
-
-const dbRateLimiter: express.RequestHandler = (req, res, next) => {
-  const key = req.ip || req.socket.remoteAddress || "unknown";
-  const now = Date.now();
-  const current = requestCounts.get(key);
-
-  if (!current || now - current.windowStart >= WINDOW_MS) {
-    requestCounts.set(key, { count: 1, windowStart: now });
-    return next();
-  }
-
-  if (current.count >= MAX_DB_REQUESTS_PER_WINDOW) {
-    return res.status(429).json({ message: "Too many requests" });
-  }
-
-  current.count += 1;
-  requestCounts.set(key, current);
-  return next();
-};
+const dbRateLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many requests" },
+});
 
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
@@ -134,10 +120,15 @@ if (!mongoUri) {
 }
 
 const start = async () => {
-  await mongoose.connect(mongoUri);
-  app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-  });
+  try {
+    await mongoose.connect(mongoUri);
+    app.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+    });
+  } catch (error) {
+    console.error("Failed to connect to MongoDB", error);
+    process.exit(1);
+  }
 };
 
 void start();
