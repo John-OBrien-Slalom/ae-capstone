@@ -8,11 +8,34 @@ import { ReviewModel } from "./models/Review";
 const app = express();
 app.use(express.json());
 
+const WINDOW_MS = 60_000;
+const MAX_DB_REQUESTS_PER_WINDOW = 60;
+const requestCounts = new Map<string, { count: number; windowStart: number }>();
+
+const dbRateLimiter: express.RequestHandler = (req, res, next) => {
+  const key = req.ip || req.socket.remoteAddress || "unknown";
+  const now = Date.now();
+  const current = requestCounts.get(key);
+
+  if (!current || now - current.windowStart >= WINDOW_MS) {
+    requestCounts.set(key, { count: 1, windowStart: now });
+    return next();
+  }
+
+  if (current.count >= MAX_DB_REQUESTS_PER_WINDOW) {
+    return res.status(429).json({ message: "Too many requests" });
+  }
+
+  current.count += 1;
+  requestCounts.set(key, current);
+  return next();
+};
+
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
-app.post("/movies", async (req, res) => {
+app.post("/movies", dbRateLimiter, async (req, res) => {
   try {
     const { title, releaseYear, genres } = req.body;
 
@@ -27,12 +50,13 @@ app.post("/movies", async (req, res) => {
     });
 
     return res.status(201).json(movie);
-  } catch {
+  } catch (error) {
+    console.error("Failed to create movie", error);
     return res.status(500).json({ message: "Failed to create movie" });
   }
 });
 
-app.get("/movies", async (_req, res) => {
+app.get("/movies", dbRateLimiter, async (_req, res) => {
   try {
     const movies = await MovieModel.find().lean();
 
@@ -48,16 +72,17 @@ app.get("/movies", async (_req, res) => {
         averageRating: ratingMap.get(movie._id.toString()) ?? null,
       })),
     );
-  } catch {
+  } catch (error) {
+    console.error("Failed to fetch movies", error);
     return res.status(500).json({ message: "Failed to fetch movies" });
   }
 });
 
-app.post("/movies/:movieId/reviews", async (req, res) => {
+app.post("/movies/:movieId/reviews", dbRateLimiter, async (req, res) => {
   const { movieId } = req.params;
   const { reviewer, rating, comment } = req.body;
 
-  if (!isValidObjectId(movieId)) {
+  if (typeof movieId !== "string" || !isValidObjectId(movieId)) {
     return res.status(400).json({ message: "invalid movieId" });
   }
 
@@ -79,22 +104,24 @@ app.post("/movies/:movieId/reviews", async (req, res) => {
     const review = await ReviewModel.create({ movieId, reviewer, rating, comment });
 
     return res.status(201).json(review);
-  } catch {
+  } catch (error) {
+    console.error("Failed to create review", error);
     return res.status(500).json({ message: "Failed to create review" });
   }
 });
 
-app.get("/movies/:movieId/reviews", async (req, res) => {
+app.get("/movies/:movieId/reviews", dbRateLimiter, async (req, res) => {
   const { movieId } = req.params;
 
-  if (!isValidObjectId(movieId)) {
+  if (typeof movieId !== "string" || !isValidObjectId(movieId)) {
     return res.status(400).json({ message: "invalid movieId" });
   }
 
   try {
     const reviews = await ReviewModel.find({ movieId }).sort({ createdAt: -1 }).lean();
     return res.status(200).json(reviews);
-  } catch {
+  } catch (error) {
+    console.error("Failed to fetch reviews", error);
     return res.status(500).json({ message: "Failed to fetch reviews" });
   }
 });
