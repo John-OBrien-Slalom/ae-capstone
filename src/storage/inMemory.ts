@@ -119,9 +119,10 @@ export const listMovies = (params: {
 
   const total = filtered.length;
   const skip = (params.page - 1) * params.limit;
+  const averageRatings = getAverageRatingMap(new Set(filtered.map((movie) => movie._id)));
   const data = filtered.slice(skip, skip + params.limit).map((movie) => ({
     ...cloneMovie(movie),
-    averageRating: getAverageRating(movie._id),
+    averageRating: averageRatings.get(movie._id) ?? null,
   }));
 
   return {
@@ -183,12 +184,11 @@ export const deleteMovie = (movieId: string) => {
   }
 
   const [deletedMovie] = movies.splice(movieIndex, 1);
-
-  for (let index = reviews.length - 1; index >= 0; index -= 1) {
-    if (reviews[index].movieId === movieId) {
-      reviews.splice(index, 1);
-    }
-  }
+  reviews.splice(
+    0,
+    reviews.length,
+    ...reviews.filter((review) => review.movieId !== movieId),
+  );
 
   return cloneMovie(deletedMovie);
 };
@@ -280,12 +280,24 @@ export const deleteWatchlistItem = (itemId: string) => {
 };
 
 const getAverageRating = (movieId: string) => {
-  const movieReviews = reviews.filter((review) => review.movieId === movieId);
+  return getAverageRatingMap(new Set([movieId])).get(movieId) ?? null;
+};
 
-  if (movieReviews.length === 0) {
-    return null;
+const getAverageRatingMap = (movieIds: Set<string>) => {
+  const totals = new Map<string, { count: number; total: number }>();
+
+  for (const review of reviews) {
+    if (!movieIds.has(review.movieId)) {
+      continue;
+    }
+
+    const entry = totals.get(review.movieId) ?? { count: 0, total: 0 };
+    entry.count += 1;
+    entry.total += review.rating;
+    totals.set(review.movieId, entry);
   }
 
-  const totalRating = movieReviews.reduce((sum, review) => sum + review.rating, 0);
-  return Math.round((totalRating / movieReviews.length) * 10) / 10;
+  return new Map(
+    [...totals.entries()].map(([movieId, value]) => [movieId, Math.round((value.total / value.count) * 10) / 10]),
+  );
 };
