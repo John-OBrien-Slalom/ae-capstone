@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Movie Tracker</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>🎬 Movie Tracker</h1>
+      <nav>
+        <button class="active" data-section="movies">Movies</button>
+        <button data-section="watchlist">Watchlist</button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- ── Movies Section ─────────────────────────────────── -->
+      <section id="movies" class="section active">
+        <div class="toolbar">
+          <input
+            type="text"
+            id="search-input"
+            placeholder="Search movies…"
+            autocomplete="off"
+          />
+          <label class="toggle-pill" id="rated-toggle">
+            <input type="checkbox" id="rated-only" /> My Rated Movies
+          </label>
+          <button class="btn btn-primary" id="open-add-movie">+ Add Movie</button>
+        </div>
+
+        <!-- Add Movie Form (hidden by default) -->
+        <div class="form-panel" id="add-movie-panel" style="display:none">
+          <h3>Add New Movie</h3>
+          <div class="form-row">
+            <div class="form-group" style="flex:2; min-width:200px">
+              <label for="new-title">Title *</label>
+              <input type="text" id="new-title" placeholder="Movie title" />
+            </div>
+            <div class="form-group">
+              <label for="new-year">Year</label>
+              <input type="number" id="new-year" placeholder="e.g. 2024" min="1888" max="2100" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="min-width:280px">
+              <label for="new-genres">Genres (comma-separated)</label>
+              <input type="text" id="new-genres" placeholder="e.g. Drama, Thriller" />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-secondary" id="cancel-add-movie">Cancel</button>
+            <button class="btn btn-primary" id="save-movie">Save Movie</button>
+          </div>
+        </div>
+
+        <div id="movies-container">
+          <div class="loading">Loading movies…</div>
+        </div>
+
+        <div class="pagination" id="pagination" style="display:none">
+          <button class="btn btn-secondary btn-sm" id="prev-page">← Prev</button>
+          <span id="page-info"></span>
+          <button class="btn btn-secondary btn-sm" id="next-page">Next →</button>
+        </div>
+      </section>
+
+      <!-- ── Watchlist Section ───────────────────────────────── -->
+      <section id="watchlist" class="section">
+        <div class="form-panel">
+          <h3>Add to Watchlist</h3>
+          <div class="form-row">
+            <div class="form-group" style="flex:2; min-width:200px">
+              <label for="wl-title">Title *</label>
+              <input type="text" id="wl-title" placeholder="Movie you want to see" />
+            </div>
+            <div class="form-group" style="flex:2; min-width:200px">
+              <label for="wl-note">Note (optional)</label>
+              <input type="text" id="wl-note" placeholder="Why you want to see it" />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" id="save-watchlist">Add to Watchlist</button>
+          </div>
+        </div>
+
+        <div id="watchlist-container">
+          <div class="loading">Loading watchlist…</div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ── Movie Detail Modal ──────────────────────────────── -->
+    <div class="modal-backdrop" id="movie-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h2 id="modal-movie-title"></h2>
+            <div class="movie-meta" id="modal-movie-meta" style="margin-top:0.4rem"></div>
+          </div>
+          <button class="modal-close" id="close-modal">✕</button>
+        </div>
+
+        <div id="modal-avg-rating" style="margin-bottom:1rem"></div>
+
+        <!-- Add Review Form -->
+        <div class="form-panel">
+          <h3>Add a Rating</h3>
+          <div class="form-row">
+            <div class="form-group" style="flex:2; min-width:160px">
+              <label for="rev-reviewer">Your Name *</label>
+              <input type="text" id="rev-reviewer" placeholder="Your name" />
+            </div>
+            <div class="form-group">
+              <label>Rating *</label>
+              <div class="star-picker" id="add-star-picker">
+                <span class="star" data-value="1">★</span>
+                <span class="star" data-value="2">★</span>
+                <span class="star" data-value="3">★</span>
+                <span class="star" data-value="4">★</span>
+                <span class="star" data-value="5">★</span>
+              </div>
+              <input type="hidden" id="rev-rating" value="" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="width:100%">
+              <label for="rev-comment">Comment (optional)</label>
+              <textarea id="rev-comment" placeholder="What did you think?"></textarea>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" id="submit-review">Submit Rating</button>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <!-- Reviews List -->
+        <div class="reviews-section">
+          <h3>Ratings &amp; Reviews</h3>
+          <div id="reviews-container">
+            <div class="loading">Loading reviews…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
