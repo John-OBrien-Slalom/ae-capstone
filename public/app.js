@@ -180,7 +180,7 @@ document.getElementById("save-movie").addEventListener("click", async () => {
 
   try {
     const movie = await api.createMovie(body);
-    const movieTitle = typeof movie.title === "string" ? movie.title : "";
+    const movieTitle = movie && typeof movie === "object" && typeof movie.title === "string" ? movie.title : "";
     const matchesSearch = !searchQuery || movieTitle.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (!matchesSearch || ratedOnly) {
