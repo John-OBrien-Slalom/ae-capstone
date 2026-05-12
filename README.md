@@ -1,6 +1,6 @@
 # ae-capstone
 
-Movie review and tracking app with a full web frontend, built with Node.js, TypeScript, and in-memory storage.
+Movie review and tracking app with a full web frontend, built with Node.js, TypeScript, and MongoDB.
 
 ## Requirements
 
@@ -16,11 +16,11 @@ Movie review and tracking app with a full web frontend, built with Node.js, Type
    ```bash
    cp .env.example .env
    ```
-3. Build and run:
+3. Start the app:
    ```bash
-   npm run build
    npm start
    ```
+   `npm start` builds the app, starts a local MongoDB instance automatically when `MONGODB_URI` is not set, and connects the API to that database.
 4. Open your browser at `http://localhost:3000`
 
 ## Frontend

@@ -1,7 +1,7 @@
 {
   "name": "ae-capstone",
   "version": "1.0.0",
-  "description": "Movie review and tracking app built with Node.js, TypeScript, and in-memory storage",
+  "description": "Movie review and tracking app built with Node.js, TypeScript, and MongoDB",
   "main": "dist/index.js",
   "scripts": {
     "test": "npm run build",
@@ -25,7 +25,9 @@
   "dependencies": {
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.5.1"
+    "express-rate-limit": "^8.5.1",
+    "mongodb-memory-server": "^11.1.0",
+    "mongoose": "^9.6.2"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
