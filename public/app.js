@@ -194,7 +194,7 @@ document.getElementById("save-movie").addEventListener("click", async () => {
     }
 
     const movieTitle = movie.title;
-    const movieHasRating = typeof movie?.averageRating === "number";
+    const movieHasRating = typeof movie.averageRating === "number";
     const normalizedSearchQuery = searchQuery.toLowerCase();
     const matchesSearch = !searchQuery || movieTitle.toLowerCase().includes(normalizedSearchQuery);
 
