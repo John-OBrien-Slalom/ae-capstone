@@ -28,7 +28,7 @@ const movies: Movie[] = [];
 const reviews: Review[] = [];
 const watchlistItems: WatchlistItem[] = [];
 
-const idPattern = /^[a-f0-9]{24}$/i;
+const hexId24Pattern = /^[a-f0-9]{24}$/i;
 const ratingPrecisionFactor = 10;
 
 const generateId = () => randomBytes(12).toString("hex");
@@ -70,7 +70,7 @@ const normalizeGenres = (genres: unknown) => {
     .filter((genre) => genre !== "");
 };
 
-export const isValidId = (value: string) => idPattern.test(value);
+export const isValidId = (value: string) => hexId24Pattern.test(value);
 
 export const createMovie = (input: { title: string; releaseYear?: number; genres?: unknown }) => {
   const now = new Date();
@@ -291,10 +291,11 @@ const getAverageRatingMap = (movieIds: Set<string>) => {
       continue;
     }
 
-    const entry = totals.get(review.movieId) ?? { count: 0, total: 0 };
-    entry.count += 1;
-    entry.total += review.rating;
-    totals.set(review.movieId, entry);
+    const entry = totals.get(review.movieId);
+    totals.set(review.movieId, {
+      count: (entry?.count ?? 0) + 1,
+      total: (entry?.total ?? 0) + review.rating,
+    });
   }
 
   return new Map(
