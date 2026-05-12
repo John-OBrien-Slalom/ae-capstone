@@ -1,13 +1,16 @@
 import "dotenv/config";
+import path from "path";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import mongoose, { isValidObjectId } from "mongoose";
 
 import { MovieModel } from "./models/Movie";
 import { ReviewModel } from "./models/Review";
+import { WatchlistModel } from "./models/Watchlist";
 
 const app = express();
 app.use(express.json());
+app.use(express.static(path.join(__dirname, "..", "public")));
 
 const dbRateLimiter = rateLimit({
   windowMs: 60_000,
@@ -44,7 +47,7 @@ app.post("/movies", dbRateLimiter, async (req, res) => {
 
 app.get("/movies", dbRateLimiter, async (req, res) => {
   try {
-    const { search, genre, year } = req.query;
+    const { search, genre, year, rated } = req.query;
     const page = Math.max(1, Number(req.query["page"] ?? 1));
     const limit = Math.min(100, Math.max(1, Number(req.query["limit"] ?? 20)));
     const skip = (page - 1) * limit;
@@ -58,6 +61,10 @@ app.get("/movies", dbRateLimiter, async (req, res) => {
     }
     if (year !== undefined && !isNaN(Number(year))) {
       filter["releaseYear"] = Number(year);
+    }
+    if (rated === "true") {
+      const ratedMovieIds = await ReviewModel.distinct("movieId");
+      filter["_id"] = { $in: ratedMovieIds };
     }
 
     const [movies, total] = await Promise.all([
@@ -142,6 +149,49 @@ app.get("/movies/:movieId/reviews", dbRateLimiter, async (req, res) => {
   } catch (error) {
     console.error("Failed to fetch reviews", error);
     return res.status(500).json({ message: "Failed to fetch reviews" });
+  }
+});
+
+app.put("/movies/:movieId/reviews/:reviewId", dbRateLimiter, async (req, res) => {
+  const { movieId, reviewId } = req.params;
+
+  if (typeof movieId !== "string" || !isValidObjectId(movieId)) {
+    return res.status(400).json({ message: "invalid movieId" });
+  }
+
+  if (typeof reviewId !== "string" || !isValidObjectId(reviewId)) {
+    return res.status(400).json({ message: "invalid reviewId" });
+  }
+
+  const { rating, comment } = req.body;
+
+  if (rating !== undefined && (typeof rating !== "number" || rating < 1 || rating > 5)) {
+    return res.status(400).json({ message: "rating must be a number between 1 and 5" });
+  }
+
+  const update: Record<string, unknown> = {};
+  if (rating !== undefined) update["rating"] = rating;
+  if (comment !== undefined) update["comment"] = comment;
+
+  if (Object.keys(update).length === 0) {
+    return res.status(400).json({ message: "nothing to update" });
+  }
+
+  try {
+    const review = await ReviewModel.findOneAndUpdate(
+      { _id: reviewId, movieId },
+      { $set: update },
+      { new: true, runValidators: true },
+    ).lean();
+
+    if (!review) {
+      return res.status(404).json({ message: "review not found" });
+    }
+
+    return res.status(200).json(review);
+  } catch (error) {
+    console.error("Failed to update review", error);
+    return res.status(500).json({ message: "Failed to update review" });
   }
 });
 
@@ -258,6 +308,53 @@ app.delete("/movies/:movieId", dbRateLimiter, async (req, res) => {
   } catch (error) {
     console.error("Failed to delete movie", error);
     return res.status(500).json({ message: "Failed to delete movie" });
+  }
+});
+
+app.get("/watchlist", dbRateLimiter, async (_req, res) => {
+  try {
+    const items = await WatchlistModel.find().sort({ createdAt: -1 }).lean();
+    return res.status(200).json(items);
+  } catch (error) {
+    console.error("Failed to fetch watchlist", error);
+    return res.status(500).json({ message: "Failed to fetch watchlist" });
+  }
+});
+
+app.post("/watchlist", dbRateLimiter, async (req, res) => {
+  const { title, note } = req.body;
+
+  if (!title || typeof title !== "string") {
+    return res.status(400).json({ message: "title is required" });
+  }
+
+  try {
+    const item = await WatchlistModel.create({ title, note });
+    return res.status(201).json(item);
+  } catch (error) {
+    console.error("Failed to add to watchlist", error);
+    return res.status(500).json({ message: "Failed to add to watchlist" });
+  }
+});
+
+app.delete("/watchlist/:itemId", dbRateLimiter, async (req, res) => {
+  const { itemId } = req.params;
+
+  if (typeof itemId !== "string" || !isValidObjectId(itemId)) {
+    return res.status(400).json({ message: "invalid itemId" });
+  }
+
+  try {
+    const item = await WatchlistModel.findByIdAndDelete(itemId).lean();
+
+    if (!item) {
+      return res.status(404).json({ message: "watchlist item not found" });
+    }
+
+    return res.status(200).json({ message: "watchlist item removed" });
+  } catch (error) {
+    console.error("Failed to remove from watchlist", error);
+    return res.status(500).json({ message: "Failed to remove from watchlist" });
   }
 });
 
