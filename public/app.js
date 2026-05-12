@@ -188,11 +188,12 @@ document.getElementById("save-movie").addEventListener("click", async () => {
 
   try {
     const movie = await api.createMovie(body);
-    const movieTitle = movie && typeof movie === "object" && typeof movie.title === "string" ? movie.title : "";
+    const movieTitle = typeof movie?.title === "string" ? movie.title : "";
+    const movieHasRating = typeof movie?.averageRating === "number";
     const normalizedSearchQuery = searchQuery.toLowerCase();
     const matchesSearch = !searchQuery || movieTitle.toLowerCase().includes(normalizedSearchQuery);
 
-    if (!matchesSearch || ratedOnly) {
+    if (!matchesSearch || (ratedOnly && !movieHasRating)) {
       resetMovieFilters();
     }
 
