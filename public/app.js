@@ -179,13 +179,23 @@ document.getElementById("save-movie").addEventListener("click", async () => {
   if (genresVal) body.genres = genresVal.split(",").map((g) => g.trim()).filter(Boolean);
 
   try {
-    await api.createMovie(body);
+    const movie = await api.createMovie(body);
+    const matchesSearch = !searchQuery || movie.title.toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (!matchesSearch || ratedOnly) {
+      searchQuery = "";
+      ratedOnly = false;
+      document.getElementById("search-input").value = "";
+      document.getElementById("rated-only").checked = false;
+      document.getElementById("rated-toggle").classList.remove("on");
+    }
+
     toast("Movie added!");
     clearAddMovieForm();
     addMoviePanelOpen = false;
     document.getElementById("add-movie-panel").style.display = "none";
     currentPage = 1;
-    loadMovies();
+    await loadMovies();
   } catch (err) {
     toast(`Failed to add movie: ${err.message}`, "error");
   }
