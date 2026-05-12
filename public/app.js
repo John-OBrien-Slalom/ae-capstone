@@ -188,7 +188,12 @@ document.getElementById("save-movie").addEventListener("click", async () => {
 
   try {
     const movie = await api.createMovie(body);
-    const movieTitle = typeof movie?.title === "string" ? movie.title : "";
+
+    if (!movie || typeof movie !== "object" || typeof movie.title !== "string") {
+      throw new Error("Invalid movie response");
+    }
+
+    const movieTitle = movie.title;
     const movieHasRating = typeof movie?.averageRating === "number";
     const normalizedSearchQuery = searchQuery.toLowerCase();
     const matchesSearch = !searchQuery || movieTitle.toLowerCase().includes(normalizedSearchQuery);
