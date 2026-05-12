@@ -29,8 +29,10 @@ const reviews: Review[] = [];
 const watchlistItems: WatchlistItem[] = [];
 
 const idPattern = /^[a-f0-9]{24}$/i;
+const ratingPrecisionFactor = 10;
 
 const generateId = () => randomBytes(12).toString("hex");
+const roundToOneDecimal = (value: number) => Math.round(value * ratingPrecisionFactor) / ratingPrecisionFactor;
 
 const trimToUndefined = (value: string | undefined) => {
   if (value === undefined) {
@@ -184,11 +186,9 @@ export const deleteMovie = (movieId: string) => {
   }
 
   const [deletedMovie] = movies.splice(movieIndex, 1);
-  reviews.splice(
-    0,
-    reviews.length,
-    ...reviews.filter((review) => review.movieId !== movieId),
-  );
+  const remainingReviews = reviews.filter((review) => review.movieId !== movieId);
+  reviews.length = 0;
+  reviews.push(...remainingReviews);
 
   return cloneMovie(deletedMovie);
 };
@@ -298,6 +298,6 @@ const getAverageRatingMap = (movieIds: Set<string>) => {
   }
 
   return new Map(
-    [...totals.entries()].map(([movieId, value]) => [movieId, Math.round((value.total / value.count) * 10) / 10]),
+    [...totals.entries()].map(([movieId, value]) => [movieId, roundToOneDecimal(value.total / value.count)]),
   );
 };
