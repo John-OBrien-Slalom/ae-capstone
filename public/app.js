@@ -164,6 +164,14 @@ document.getElementById("cancel-add-movie").addEventListener("click", () => {
   clearAddMovieForm();
 });
 
+function resetMovieFilters() {
+  searchQuery = "";
+  ratedOnly = false;
+  document.getElementById("search-input").value = "";
+  document.getElementById("rated-only").checked = false;
+  document.getElementById("rated-toggle").classList.remove("on");
+}
+
 document.getElementById("save-movie").addEventListener("click", async () => {
   const title = document.getElementById("new-title").value.trim();
   const yearVal = document.getElementById("new-year").value.trim();
@@ -181,14 +189,11 @@ document.getElementById("save-movie").addEventListener("click", async () => {
   try {
     const movie = await api.createMovie(body);
     const movieTitle = movie && typeof movie === "object" && typeof movie.title === "string" ? movie.title : "";
-    const matchesSearch = !searchQuery || movieTitle.toLowerCase().includes(searchQuery.toLowerCase());
+    const normalizedSearchQuery = searchQuery.toLowerCase();
+    const matchesSearch = !searchQuery || movieTitle.toLowerCase().includes(normalizedSearchQuery);
 
     if (!matchesSearch || ratedOnly) {
-      searchQuery = "";
-      ratedOnly = false;
-      document.getElementById("search-input").value = "";
-      document.getElementById("rated-only").checked = false;
-      document.getElementById("rated-toggle").classList.remove("on");
+      resetMovieFilters();
     }
 
     toast("Movie added!");
