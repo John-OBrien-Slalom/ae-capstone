@@ -185,7 +185,7 @@ export const deleteMovie = (movieId: string) => {
   const [deletedMovie] = movies.splice(movieIndex, 1);
 
   for (let index = reviews.length - 1; index >= 0; index -= 1) {
-    if (reviews[index]?.movieId === movieId) {
+    if (reviews[index].movieId === movieId) {
       reviews.splice(index, 1);
     }
   }
@@ -287,5 +287,5 @@ const getAverageRating = (movieId: string) => {
   }
 
   const totalRating = movieReviews.reduce((sum, review) => sum + review.rating, 0);
-  return Number((totalRating / movieReviews.length).toFixed(1));
+  return Math.round((totalRating / movieReviews.length) * 10) / 10;
 };
