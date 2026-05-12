@@ -29,10 +29,10 @@ const reviews: Review[] = [];
 const watchlistItems: WatchlistItem[] = [];
 
 const hexId24Pattern = /^[a-f0-9]{24}$/i;
-const ratingPrecisionFactor = 10;
+const roundingMultiplier = 10;
 
 const generateId = () => randomBytes(12).toString("hex");
-const roundToOneDecimal = (value: number) => Math.round(value * ratingPrecisionFactor) / ratingPrecisionFactor;
+const roundToOneDecimal = (value: number) => Math.round(value * roundingMultiplier) / roundingMultiplier;
 
 const trimToUndefined = (value: string | undefined) => {
   if (value === undefined) {
@@ -43,18 +43,11 @@ const trimToUndefined = (value: string | undefined) => {
   return trimmed === "" ? undefined : trimmed;
 };
 
-const cloneMovie = (movie: Movie): Movie => ({
-  ...movie,
-  genres: [...movie.genres],
-});
+const cloneMovie = (movie: Movie): Movie => structuredClone(movie);
 
-const cloneReview = (review: Review): Review => ({
-  ...review,
-});
+const cloneReview = (review: Review): Review => structuredClone(review);
 
-const cloneWatchlistItem = (item: WatchlistItem): WatchlistItem => ({
-  ...item,
-});
+const cloneWatchlistItem = (item: WatchlistItem): WatchlistItem => structuredClone(item);
 
 const sortNewestFirst = <T extends BaseRecord>(items: T[]) =>
   [...items].sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
