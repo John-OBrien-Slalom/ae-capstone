@@ -23,7 +23,7 @@ test.beforeEach(() => {
 });
 
 test("movie storage supports filtering, updates, ratings, and cascade delete", () => {
-  const arrival = createMovie({ title: " Arrival ", releaseYear: 2016, genres: ["Sci-Fi", " Drama ", ""] });
+  const arrival = createMovie({ title: " Arrival ", releaseYear: 2016, genres: ["Sci-Fi", " Drama ", "", 42] });
   const alien = createMovie({ title: "Alien", releaseYear: 1979, genres: ["Sci-Fi", "Horror"] });
   createMovie({ title: "Amelie", releaseYear: 2001, genres: ["Romance"] });
 
@@ -88,7 +88,7 @@ test("review storage supports updates, trimming, pagination, and missing records
   assert.equal(deleteReview(movie._id, firstReview._id), null);
 });
 
-test("watchlist storage adds listable movies without duplicate titles and supports removal", () => {
+test("watchlist storage adds listable movies without duplicate movie records and supports removal", () => {
   const firstItem = createWatchlistItem({ title: "Dune", note: "  IMAX  " });
   createWatchlistItem({ title: " dune " });
 
