@@ -65,3 +65,22 @@ This file is committed to git as a historical record.
 ### Outcomes
 - The application now runs without any external database dependency.
 - Build validation and manual API smoke checks pass with the temporary in-memory implementation.
+
+---
+
+### Session
+- **Name:** Remove MongoDB Restore
+- **Date:** 2026-05-13
+
+### What Was Accomplished
+- Reverted the MongoDB/Mongoose startup and persistence changes back to the existing in-memory storage implementation.
+- Removed the MongoDB/Mongoose dependencies, models, and related documentation/config references.
+- Verified the project still builds successfully with `npm test`.
+
+### Key Findings and Decisions
+- The MongoDB-backed restore was isolated to the files introduced in `15b29f3`, so restoring those files to `15b29f3~1` preserved the later UI fixes.
+- The in-memory storage module already preserved the API contract expected by the frontend, so no frontend changes were needed.
+
+### Outcomes
+- The application no longer depends on MongoDB or Mongoose to start or save data.
+- The branch now matches the requested in-memory storage approach while keeping the recent movie-save UI behavior.
