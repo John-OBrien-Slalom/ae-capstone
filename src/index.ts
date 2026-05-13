@@ -376,7 +376,10 @@ const resolveMongoUri = async () => {
   });
   usingEmbeddedMongo = true;
 
-  return mongoServer.getUri();
+  const mongoUri = mongoServer.getUri();
+  process.env.MONGODB_URI = mongoUri;
+
+  return mongoUri;
 };
 
 const stopMongoServer = async () => {
