@@ -31,5 +31,20 @@ Capture reusable implementation patterns discovered over time.
   ```
 - **Related Files:**
   - `src/index.ts`
-  - `src/models/Movie.ts`
-  - `src/models/Review.ts`
+  - `src/storage/inMemory.ts`
+
+---
+
+### Pattern Name
+- **Context:** Temporary local persistence for lightweight Express apps.
+- **Problem:** Replacing external persistence can break route validation or frontend assumptions if record shapes change.
+- **Solution:** Keep API contracts stable by preserving `_id` strings, timestamps, pagination metadata, and derived fields while swapping the backing store.
+- **Example:**
+  ```ts
+  const movie = createMovie({ title, releaseYear, genres });
+
+  return res.status(201).json(movie);
+  ```
+- **Related Files:**
+  - `src/index.ts`
+  - `src/storage/inMemory.ts`

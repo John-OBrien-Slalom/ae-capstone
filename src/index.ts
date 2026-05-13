@@ -2,11 +2,22 @@ import "dotenv/config";
 import path from "path";
 import express from "express";
 import rateLimit from "express-rate-limit";
-import mongoose, { isValidObjectId } from "mongoose";
-
-import { MovieModel } from "./models/Movie";
-import { ReviewModel } from "./models/Review";
-import { WatchlistModel } from "./models/Watchlist";
+import {
+  createMovie,
+  createReview,
+  createWatchlistItem,
+  deleteMovie,
+  deleteReview,
+  deleteWatchlistItem,
+  getMovie,
+  getMovieWithAverageRating,
+  isValidId,
+  listMovies,
+  listReviews,
+  listWatchlistItems,
+  updateMovie,
+  updateReview,
+} from "./storage/inMemory";
 
 const app = express();
 app.use(express.json());
@@ -32,10 +43,10 @@ app.post("/movies", dbRateLimiter, async (req, res) => {
       return res.status(400).json({ message: "title is required" });
     }
 
-    const movie = await MovieModel.create({
+    const movie = createMovie({
       title,
       releaseYear,
-      genres: Array.isArray(genres) ? genres : [],
+      genres,
     });
 
     return res.status(201).json(movie);
@@ -50,46 +61,21 @@ app.get("/movies", dbRateLimiter, async (req, res) => {
     const { search, genre, year, rated } = req.query;
     const page = Math.max(1, Number(req.query["page"] ?? 1));
     const limit = Math.min(100, Math.max(1, Number(req.query["limit"] ?? 20)));
-    const skip = (page - 1) * limit;
-
-    const filter: Record<string, unknown> = {};
-    if (typeof search === "string" && search.trim() !== "") {
-      filter["title"] = { $regex: search.trim(), $options: "i" };
-    }
-    if (typeof genre === "string" && genre.trim() !== "") {
-      filter["genres"] = genre.trim();
-    }
-    if (year !== undefined && !isNaN(Number(year))) {
-      filter["releaseYear"] = Number(year);
-    }
-    if (rated === "true") {
-      const ratedMovieIds = await ReviewModel.distinct("movieId");
-      filter["_id"] = { $in: ratedMovieIds };
-    }
-
-    const [movies, total] = await Promise.all([
-      MovieModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-      MovieModel.countDocuments(filter),
-    ]);
-
-    const movieIds = movies.map((m) => m._id);
-
-    const ratings = await ReviewModel.aggregate<{ _id: mongoose.Types.ObjectId; averageRating: number }>([
-      { $match: { movieId: { $in: movieIds } } },
-      { $group: { _id: "$movieId", averageRating: { $avg: "$rating" } } },
-    ]);
-
-    const ratingMap = new Map(ratings.map((rating) => [rating._id.toString(), Number(rating.averageRating.toFixed(1))]));
+    const { data, total, totalPages } = listMovies({
+      search: typeof search === "string" ? search : undefined,
+      genre: typeof genre === "string" ? genre : undefined,
+      year: year !== undefined && !isNaN(Number(year)) ? Number(year) : undefined,
+      ratedOnly: rated === "true",
+      page,
+      limit,
+    });
 
     return res.status(200).json({
-      data: movies.map((movie) => ({
-        ...movie,
-        averageRating: ratingMap.get(movie._id.toString()) ?? null,
-      })),
+      data,
       page,
       limit,
       total,
-      totalPages: Math.ceil(total / limit),
+      totalPages,
     });
   } catch (error) {
     console.error("Failed to fetch movies", error);
@@ -101,7 +87,7 @@ app.post("/movies/:movieId/reviews", dbRateLimiter, async (req, res) => {
   const { movieId } = req.params;
   const { reviewer, rating, comment } = req.body;
 
-  if (typeof movieId !== "string" || !isValidObjectId(movieId)) {
+  if (typeof movieId !== "string" || !isValidId(movieId)) {
     return res.status(400).json({ message: "invalid movieId" });
   }
 
@@ -114,13 +100,13 @@ app.post("/movies/:movieId/reviews", dbRateLimiter, async (req, res) => {
   }
 
   try {
-    const movie = await MovieModel.findById(movieId).lean();
+    const movie = getMovie(movieId);
 
     if (!movie) {
       return res.status(404).json({ message: "movie not found" });
     }
 
-    const review = await ReviewModel.create({ movieId, reviewer, rating, comment });
+    const review = createReview({ movieId, reviewer, rating, comment });
 
     return res.status(201).json(review);
   } catch (error) {
@@ -132,20 +118,16 @@ app.post("/movies/:movieId/reviews", dbRateLimiter, async (req, res) => {
 app.get("/movies/:movieId/reviews", dbRateLimiter, async (req, res) => {
   const { movieId } = req.params;
 
-  if (typeof movieId !== "string" || !isValidObjectId(movieId)) {
+  if (typeof movieId !== "string" || !isValidId(movieId)) {
     return res.status(400).json({ message: "invalid movieId" });
   }
 
   const page = Math.max(1, Number(req.query["page"] ?? 1));
   const limit = Math.min(100, Math.max(1, Number(req.query["limit"] ?? 20)));
-  const skip = (page - 1) * limit;
 
   try {
-    const [reviews, total] = await Promise.all([
-      ReviewModel.find({ movieId }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-      ReviewModel.countDocuments({ movieId }),
-    ]);
-    return res.status(200).json({ data: reviews, page, limit, total, totalPages: Math.ceil(total / limit) });
+    const { data, total, totalPages } = listReviews(movieId, page, limit);
+    return res.status(200).json({ data, page, limit, total, totalPages });
   } catch (error) {
     console.error("Failed to fetch reviews", error);
     return res.status(500).json({ message: "Failed to fetch reviews" });
@@ -155,11 +137,11 @@ app.get("/movies/:movieId/reviews", dbRateLimiter, async (req, res) => {
 app.put("/movies/:movieId/reviews/:reviewId", dbRateLimiter, async (req, res) => {
   const { movieId, reviewId } = req.params;
 
-  if (typeof movieId !== "string" || !isValidObjectId(movieId)) {
+  if (typeof movieId !== "string" || !isValidId(movieId)) {
     return res.status(400).json({ message: "invalid movieId" });
   }
 
-  if (typeof reviewId !== "string" || !isValidObjectId(reviewId)) {
+  if (typeof reviewId !== "string" || !isValidId(reviewId)) {
     return res.status(400).json({ message: "invalid reviewId" });
   }
 
@@ -169,20 +151,12 @@ app.put("/movies/:movieId/reviews/:reviewId", dbRateLimiter, async (req, res) =>
     return res.status(400).json({ message: "rating must be a number between 1 and 5" });
   }
 
-  const update: Record<string, unknown> = {};
-  if (rating !== undefined) update["rating"] = rating;
-  if (comment !== undefined) update["comment"] = comment;
-
-  if (Object.keys(update).length === 0) {
+  if (rating === undefined && comment === undefined) {
     return res.status(400).json({ message: "nothing to update" });
   }
 
   try {
-    const review = await ReviewModel.findOneAndUpdate(
-      { _id: reviewId, movieId },
-      { $set: update },
-      { new: true, runValidators: true },
-    ).lean();
+    const review = updateReview(movieId, reviewId, { rating, comment });
 
     if (!review) {
       return res.status(404).json({ message: "review not found" });
@@ -198,16 +172,16 @@ app.put("/movies/:movieId/reviews/:reviewId", dbRateLimiter, async (req, res) =>
 app.delete("/movies/:movieId/reviews/:reviewId", dbRateLimiter, async (req, res) => {
   const { movieId, reviewId } = req.params;
 
-  if (typeof movieId !== "string" || !isValidObjectId(movieId)) {
+  if (typeof movieId !== "string" || !isValidId(movieId)) {
     return res.status(400).json({ message: "invalid movieId" });
   }
 
-  if (typeof reviewId !== "string" || !isValidObjectId(reviewId)) {
+  if (typeof reviewId !== "string" || !isValidId(reviewId)) {
     return res.status(400).json({ message: "invalid reviewId" });
   }
 
   try {
-    const review = await ReviewModel.findOneAndDelete({ _id: reviewId, movieId }).lean();
+    const review = deleteReview(movieId, reviewId);
 
     if (!review) {
       return res.status(404).json({ message: "review not found" });
@@ -223,25 +197,17 @@ app.delete("/movies/:movieId/reviews/:reviewId", dbRateLimiter, async (req, res)
 app.get("/movies/:movieId", dbRateLimiter, async (req, res) => {
   const { movieId } = req.params;
 
-  if (typeof movieId !== "string" || !isValidObjectId(movieId)) {
+  if (typeof movieId !== "string" || !isValidId(movieId)) {
     return res.status(400).json({ message: "invalid movieId" });
   }
 
   try {
-    const movie = await MovieModel.findById(movieId).lean();
+    const movie = getMovieWithAverageRating(movieId);
 
     if (!movie) {
       return res.status(404).json({ message: "movie not found" });
     }
-
-    const ratingResult = await ReviewModel.aggregate<{ averageRating: number }>([
-      { $match: { movieId: movie._id } },
-      { $group: { _id: null, averageRating: { $avg: "$rating" } } },
-    ]);
-
-    const averageRating = ratingResult.length > 0 ? Number(ratingResult[0].averageRating.toFixed(1)) : null;
-
-    return res.status(200).json({ ...movie, averageRating });
+    return res.status(200).json(movie);
   } catch (error) {
     console.error("Failed to fetch movie", error);
     return res.status(500).json({ message: "Failed to fetch movie" });
@@ -251,7 +217,7 @@ app.get("/movies/:movieId", dbRateLimiter, async (req, res) => {
 app.put("/movies/:movieId", dbRateLimiter, async (req, res) => {
   const { movieId } = req.params;
 
-  if (typeof movieId !== "string" || !isValidObjectId(movieId)) {
+  if (typeof movieId !== "string" || !isValidId(movieId)) {
     return res.status(400).json({ message: "invalid movieId" });
   }
 
@@ -269,13 +235,8 @@ app.put("/movies/:movieId", dbRateLimiter, async (req, res) => {
     return res.status(400).json({ message: "genres must be an array" });
   }
 
-  const update: Record<string, unknown> = {};
-  if (title !== undefined) update["title"] = title;
-  if (releaseYear !== undefined) update["releaseYear"] = releaseYear;
-  if (genres !== undefined) update["genres"] = genres;
-
   try {
-    const movie = await MovieModel.findByIdAndUpdate(movieId, { $set: update }, { new: true, runValidators: true }).lean();
+    const movie = updateMovie(movieId, { title, releaseYear, genres });
 
     if (!movie) {
       return res.status(404).json({ message: "movie not found" });
@@ -291,18 +252,16 @@ app.put("/movies/:movieId", dbRateLimiter, async (req, res) => {
 app.delete("/movies/:movieId", dbRateLimiter, async (req, res) => {
   const { movieId } = req.params;
 
-  if (typeof movieId !== "string" || !isValidObjectId(movieId)) {
+  if (typeof movieId !== "string" || !isValidId(movieId)) {
     return res.status(400).json({ message: "invalid movieId" });
   }
 
   try {
-    const movie = await MovieModel.findByIdAndDelete(movieId).lean();
+    const movie = deleteMovie(movieId);
 
     if (!movie) {
       return res.status(404).json({ message: "movie not found" });
     }
-
-    await ReviewModel.deleteMany({ movieId });
 
     return res.status(200).json({ message: "movie deleted" });
   } catch (error) {
@@ -313,7 +272,7 @@ app.delete("/movies/:movieId", dbRateLimiter, async (req, res) => {
 
 app.get("/watchlist", dbRateLimiter, async (_req, res) => {
   try {
-    const items = await WatchlistModel.find().sort({ createdAt: -1 }).lean();
+    const items = listWatchlistItems();
     return res.status(200).json(items);
   } catch (error) {
     console.error("Failed to fetch watchlist", error);
@@ -329,7 +288,7 @@ app.post("/watchlist", dbRateLimiter, async (req, res) => {
   }
 
   try {
-    const item = await WatchlistModel.create({ title, note });
+    const item = createWatchlistItem({ title, note });
     return res.status(201).json(item);
   } catch (error) {
     console.error("Failed to add to watchlist", error);
@@ -340,12 +299,12 @@ app.post("/watchlist", dbRateLimiter, async (req, res) => {
 app.delete("/watchlist/:itemId", dbRateLimiter, async (req, res) => {
   const { itemId } = req.params;
 
-  if (typeof itemId !== "string" || !isValidObjectId(itemId)) {
+  if (typeof itemId !== "string" || !isValidId(itemId)) {
     return res.status(400).json({ message: "invalid itemId" });
   }
 
   try {
-    const item = await WatchlistModel.findByIdAndDelete(itemId).lean();
+    const item = deleteWatchlistItem(itemId);
 
     if (!item) {
       return res.status(404).json({ message: "watchlist item not found" });
@@ -358,23 +317,8 @@ app.delete("/watchlist/:itemId", dbRateLimiter, async (req, res) => {
   }
 });
 
-const mongoUri = process.env.MONGODB_URI;
 const port = Number(process.env.PORT ?? 3000);
 
-if (!mongoUri) {
-  throw new Error("MONGODB_URI must be set");
-}
-
-const start = async () => {
-  try {
-    await mongoose.connect(mongoUri);
-    app.listen(port, () => {
-      console.log(`Server is running on port ${port}`);
-    });
-  } catch (error) {
-    console.error("Failed to connect to MongoDB", error);
-    process.exit(1);
-  }
-};
-
-void start();
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});

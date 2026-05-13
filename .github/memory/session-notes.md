@@ -33,15 +33,54 @@ This file is committed to git as a historical record.
 - **Date:** 2026-05-11
 
 ### What Was Accomplished
-- Created TypeScript + Express + Mongoose backend scaffold.
+- Created the initial TypeScript + Express backend scaffold.
 - Added movie and review API endpoints.
 - Added project scripts and environment template.
 
 ### Key Findings and Decisions
-- Used Mongoose schemas with indexed `movieId` for review lookups.
-- Added request rate limiting to database-backed routes.
-- Added explicit startup error handling for MongoDB connection failures.
+- Grouped review lookups around `movieId` relationships.
+- Added request rate limiting to state-changing routes.
+- Kept startup configuration minimal for local development.
 
 ### Outcomes
 - Repository now runs as a backend service for movie tracking/reviews.
 - Build validation passes and API baseline is ready for iterative features.
+
+---
+
+### Session
+- **Name:** In-Memory Persistence Swap
+- **Date:** 2026-05-12
+
+### What Was Accomplished
+- Replaced external persistence usage with an in-memory storage module for movies, reviews, and watchlist items.
+- Removed old persistence package/config references from source, docs, and environment examples.
+- Verified the existing build and exercised the main API flows manually.
+
+### Key Findings and Decisions
+- Preserved existing API response shapes, including `_id`, timestamps, pagination metadata, and computed average ratings.
+- Used generated 24-character hex IDs so current route validation and frontend assumptions continue to work.
+- Kept review cleanup coupled to movie deletion inside the in-memory layer to match prior behavior.
+
+### Outcomes
+- The application now runs without any external database dependency.
+- Build validation and manual API smoke checks pass with the temporary in-memory implementation.
+
+---
+
+### Session
+- **Name:** Remove MongoDB Restore
+- **Date:** 2026-05-13
+
+### What Was Accomplished
+- Reverted the MongoDB/Mongoose startup and persistence changes back to the existing in-memory storage implementation.
+- Removed the MongoDB/Mongoose dependencies, models, and related documentation/config references.
+- Verified the project still builds successfully with `npm test`.
+
+### Key Findings and Decisions
+- The MongoDB-backed restore was isolated to the files introduced in `15b29f3`, so restoring those files to `15b29f3~1` preserved the later UI fixes.
+- The in-memory storage module already preserved the API contract expected by the frontend, so no frontend changes were needed.
+
+### Outcomes
+- The application no longer depends on MongoDB or Mongoose to start or save data.
+- The branch now matches the requested in-memory storage approach while keeping the recent movie-save UI behavior.
