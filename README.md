@@ -1,11 +1,10 @@
 # ae-capstone
 
-Movie review and tracking app with a full web frontend, built with Node.js, TypeScript, and MongoDB.
+Movie review and tracking app with a full web frontend, built with Node.js, TypeScript, and in-memory storage.
 
 ## Requirements
 
 - Node.js 20+
-- MongoDB (local or remote)
 
 ## Setup
 
@@ -17,13 +16,12 @@ Movie review and tracking app with a full web frontend, built with Node.js, Type
    ```bash
    cp .env.example .env
    ```
-3. Update `MONGODB_URI` in `.env` if needed.
-4. Build and run:
+3. Build and run:
    ```bash
    npm run build
    npm start
    ```
-5. Open your browser at `http://localhost:3000`
+4. Open your browser at `http://localhost:3000`
 
 ## Frontend
 
@@ -31,7 +29,7 @@ The app ships a browser-based single-page frontend served directly from the Expr
 
 - **Movies tab** — search movies, filter to only show rated movies, add a new movie, view reviews, delete a movie
 - **Reviews** (inside movie detail) — add a rating (1–5 stars) with an optional comment, edit an existing rating, delete a rating
-- **Watchlist tab** — maintain a list of movies you want to see (with optional notes), remove items
+- **Watchlist tab** — maintain a list of movies you want to see (with optional notes), remove items, and have those titles also appear in the Movies tab
 
 ## API
 
@@ -62,5 +60,5 @@ The app ships a browser-based single-page frontend served directly from the Expr
 ### Watchlist
 
 - `GET /watchlist` — list all watchlist items
-- `POST /watchlist` — add an item (`title` required; optional `note`)
+- `POST /watchlist` — add an item (`title` required; optional `note`); the title is also added to the movie list if it is not already there
 - `DELETE /watchlist/:itemId` — remove a watchlist item

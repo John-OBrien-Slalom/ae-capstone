@@ -164,6 +164,14 @@ document.getElementById("cancel-add-movie").addEventListener("click", () => {
   clearAddMovieForm();
 });
 
+function resetMovieFilters() {
+  searchQuery = "";
+  ratedOnly = false;
+  document.getElementById("search-input").value = "";
+  document.getElementById("rated-only").checked = false;
+  document.getElementById("rated-toggle").classList.remove("on");
+}
+
 document.getElementById("save-movie").addEventListener("click", async () => {
   const title = document.getElementById("new-title").value.trim();
   const yearVal = document.getElementById("new-year").value.trim();
@@ -179,13 +187,27 @@ document.getElementById("save-movie").addEventListener("click", async () => {
   if (genresVal) body.genres = genresVal.split(",").map((g) => g.trim()).filter(Boolean);
 
   try {
-    await api.createMovie(body);
+    const movie = await api.createMovie(body);
+
+    if (!movie || typeof movie !== "object" || typeof movie.title !== "string") {
+      throw new Error("Invalid movie response");
+    }
+
+    const movieTitle = movie.title;
+    const movieHasRating = typeof movie.averageRating === "number";
+    const normalizedSearchQuery = searchQuery.toLowerCase();
+    const matchesSearch = !searchQuery || movieTitle.toLowerCase().includes(normalizedSearchQuery);
+
+    if (!matchesSearch || (ratedOnly && !movieHasRating)) {
+      resetMovieFilters();
+    }
+
     toast("Movie added!");
     clearAddMovieForm();
     addMoviePanelOpen = false;
     document.getElementById("add-movie-panel").style.display = "none";
     currentPage = 1;
-    loadMovies();
+    await loadMovies();
   } catch (err) {
     toast(`Failed to add movie: ${err.message}`, "error");
   }
@@ -492,10 +514,19 @@ document.getElementById("save-watchlist").addEventListener("click", async () => 
   if (!title) { toast("Title is required", "error"); return; }
   try {
     await api.addToWatchlist({ title, note: note || undefined });
+
+    const normalizedSearchQuery = searchQuery.toLowerCase();
+    const matchesSearch = !searchQuery || title.toLowerCase().includes(normalizedSearchQuery);
+
+    if (!matchesSearch || ratedOnly) {
+      resetMovieFilters();
+    }
+
     toast("Added to watchlist!");
     document.getElementById("wl-title").value = "";
     document.getElementById("wl-note").value = "";
-    loadWatchlist();
+    currentPage = 1;
+    await Promise.all([loadWatchlist(), loadMovies()]);
   } catch (err) {
     toast(`Failed to add: ${err.message}`, "error");
   }
