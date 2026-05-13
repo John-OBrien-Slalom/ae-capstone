@@ -4,7 +4,7 @@
   "description": "Movie review and tracking app built with Node.js, TypeScript, and in-memory storage",
   "main": "dist/index.js",
   "scripts": {
-    "test": "npm run build",
+    "test": "npm run build && node --test dist/*.test.js",
     "build": "tsc",
     "prestart": "npm run build",
     "start": "node dist/index.js",

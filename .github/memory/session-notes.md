@@ -103,3 +103,24 @@ This file is committed to git as a historical record.
 ### Outcomes
 - Watchlist additions now surface in the main movie list immediately.
 - Re-adding the same title to the watchlist does not create duplicate movie records.
+
+---
+
+### Session
+- **Name:** Add Broader Automated Test Coverage
+- **Date:** 2026-05-13
+
+### What Was Accomplished
+- Added a built-in Node test suite instead of introducing a new test framework dependency.
+- Added storage-level tests for movie, review, and watchlist behavior.
+- Added API integration tests that start the compiled server in a child process and exercise the Express endpoints.
+- Updated `npm test` to build the project and then run the compiled test files.
+
+### Key Findings and Decisions
+- The repository previously had no actual tests; `npm test` only ran `tsc`.
+- Using `node:test` kept the change small and dependency-free while still validating runtime behavior.
+- A small `resetInMemoryStorage` export was added to make the in-memory store deterministic across unit tests.
+
+### Outcomes
+- The branch now has automated coverage for core in-memory storage logic and the main HTTP routes.
+- `npm test` validates both TypeScript compilation and the new test suite.

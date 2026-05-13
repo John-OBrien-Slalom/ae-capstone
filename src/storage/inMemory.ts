@@ -306,3 +306,9 @@ const getAverageRatingMap = (movieIds: Set<string>) => {
     [...totals.entries()].map(([movieId, value]) => [movieId, roundToOneDecimal(value.total / value.count)]),
   );
 };
+
+export const resetInMemoryStorage = () => {
+  movies.length = 0;
+  reviews.length = 0;
+  watchlistItems.length = 0;
+};
