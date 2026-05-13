@@ -394,6 +394,7 @@ const stopMongoServer = async () => {
 const start = async () => {
   try {
     const mongoUri = await resolveMongoUri();
+    process.env.MONGODB_URI = mongoUri;
     await mongoose.connect(mongoUri);
     mongoose.connection.on("disconnected", () => {
       console.error("Disconnected from MongoDB");
