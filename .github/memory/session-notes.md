@@ -84,3 +84,22 @@ This file is committed to git as a historical record.
 ### Outcomes
 - The application no longer depends on MongoDB or Mongoose to start or save data.
 - The branch now matches the requested in-memory storage approach while keeping the recent movie-save UI behavior.
+
+---
+
+### Session
+- **Name:** Watchlist Movies Visible in Movie List
+- **Date:** 2026-05-13
+
+### What Was Accomplished
+- Updated watchlist creation so new watchlist titles also create a corresponding in-memory movie record when one does not already exist.
+- Refreshed the Movies tab immediately after adding a watchlist entry and cleared filters only when they would hide the new title.
+- Verified the API flow and rebuilt the project successfully.
+
+### Key Findings and Decisions
+- Creating the movie at watchlist-write time kept the existing movie/review endpoints working without adding synthetic movie-list-only records.
+- Title matching for watchlist-created movies is normalized case-insensitively to avoid creating duplicate movie entries for the same title.
+
+### Outcomes
+- Watchlist additions now surface in the main movie list immediately.
+- Re-adding the same title to the watchlist does not create duplicate movie records.

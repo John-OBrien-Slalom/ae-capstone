@@ -33,6 +33,7 @@ const roundingMultiplier = 10;
 
 const generateId = () => randomBytes(12).toString("hex");
 const roundToOneDecimal = (value: number) => Math.round(value * roundingMultiplier) / roundingMultiplier;
+const normalizeTitle = (value: string) => value.trim().toLowerCase();
 
 const trimToUndefined = (value: string | undefined) => {
   if (value === undefined) {
@@ -78,6 +79,11 @@ export const createMovie = (input: { title: string; releaseYear?: number; genres
 
   movies.push(movie);
   return cloneMovie(movie);
+};
+
+const findMovieByTitle = (title: string) => {
+  const normalizedTitle = normalizeTitle(title);
+  return movies.find((movie) => normalizeTitle(movie.title) === normalizedTitle);
 };
 
 export const listMovies = (params: {
@@ -258,6 +264,11 @@ export const createWatchlistItem = (input: { title: string; note?: string }) => 
   };
 
   watchlistItems.push(item);
+
+  if (!findMovieByTitle(item.title)) {
+    createMovie({ title: item.title });
+  }
+
   return cloneWatchlistItem(item);
 };
 
